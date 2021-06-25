@@ -1,3 +1,9 @@
+# Install
+```bash
+# install dependencies
+pip install -r requirements.txt
+```
+
 # Command-line client for Zotero
 
 Right now, only export to BibTeX is implemented.
