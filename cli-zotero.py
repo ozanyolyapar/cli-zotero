@@ -1,8 +1,10 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
 # Copyright 2015 Charles University in Prague
 # Copyright 2015 Vojtech Horky
-# 
+#
+# Modified by Ozan Yolyapar
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,7 +20,7 @@
 
 from pyzotero import zotero
 from pprint import pprint
-from ConfigParser import SafeConfigParser
+from configparser import ConfigParser
 import sys
 import os
 import argparse
@@ -65,10 +67,10 @@ def make_bibtex_key(item):
             m = pat.match(l)
             if m:
                 return m.group(1)
-    author = filter(unicode.isalpha, strip_accents(get_first_author(item)).lower())
+    author = ''.join(list(filter(str.isalpha, strip_accents(get_first_author(item)).lower())))
     year = parse_date_guessing(item['data']['date']).year
     title_words = strip_accents(item['data']['title']).split()
-    title_start = filter(unicode.isalnum, skip_useless_words(title_words).lower())
+    title_start = ''.join(list(filter(str.isalnum, skip_useless_words(title_words).lower())))
     return "%s_%s_%s" % (author, title_start, year)
 
 def make_sort_key(item):
@@ -79,7 +81,7 @@ def make_sort_key(item):
     title_words = strip_accents(item['data']['title']).split()
     title_start = skip_useless_words(title_words).lower()
     return "%s %s %s" % (year, author, title_start)
-    
+
 
 def item_to_bibtex(item):
     def shall_skip(item):
@@ -87,7 +89,7 @@ def item_to_bibtex(item):
             return True
         else:
             return False
-        
+
     def bib_type(item):
         if item['data']['itemType'] == 'journalArticle':
             return 'article'
@@ -101,7 +103,7 @@ def item_to_bibtex(item):
             return 'mastersthesis'
         else:
             return 'misc'
-    
+
     def make_author_list(creators, creator_type = None):
         # By default, we try to collect only authors.
         # If there is no author explicitly specify, we take everybody
@@ -124,15 +126,15 @@ def item_to_bibtex(item):
                 else:
                     names.append('{%s}' % (c['name']))
         return ' and '.join(names)
-    
+
     def print_key(key, value, print_empty = True):
         if (not print_empty) and (value == ''):
             return
-        print('    %s = {%s},' % (key, value.encode('utf-8')))
-    
+        print('    %s = {%s},' % (key, value))
+
     def has_field(zoterokey, item):
         return zoterokey in item['data'] and item['data'][zoterokey] != ''
-    
+
     def try_field(bibtexkey, zoterokeys, item, escape=True, protect=False, conversion=None):
         if not type(zoterokeys) is list:
             zoterokeys = [ zoterokeys ]
@@ -148,7 +150,7 @@ def item_to_bibtex(item):
                 print_key(bibtexkey, value)
                 # Exit after first match
                 return
-    
+
     def get_doi(item):
         if ('DOI' in item['data']) and (item['data']['DOI'] != ''):
             return item['data']['DOI']
@@ -164,14 +166,14 @@ def item_to_bibtex(item):
 
     if shall_skip(item):
         return
-    
+
     print('@%s{%s,' % (bib_type(item), make_bibtex_key(item)))
-    
-    try_field('title', 'title', item, protect=True)
+
+    try_field('title', 'title', item, protect=False)
     print_key('author', make_author_list(item['data']['creators']))
-    
+
     print_key('year', '%d' % parse_date_guessing(item['data']['date']).year)
-    
+
     # Not so traditional types are distinguished by howpublished field for now
     if item['data']['itemType'] in [ 'blogPost', 'webpage', 'computerProgram' ]:
         try_field('howpublished', 'url', item, conversion=lambda x : '\\url{%s}' % x)
@@ -181,12 +183,12 @@ def item_to_bibtex(item):
             if has_field('url', item):
                 s = '%s, \\url{%s}' % (s, item['data']['url'])
             print_key('howpublished', s)
-    
-    try_field('booktitle', [ 'proceedingsTitle', 'bookTitle' ], item, protect=True)
-    try_field('journal', 'publicationTitle', item, protect=True)
+
+    try_field('booktitle', [ 'proceedingsTitle', 'bookTitle' ], item, protect=False)
+    try_field('journal', 'publicationTitle', item, protect=False)
     print_key('editor', make_author_list(item['data']['creators'], 'editor'), False)
     try_field('publisher', 'publisher', item)
-    try_field('series', 'series', item, protect=True)
+    try_field('series', 'series', item, protect=False)
     try_field('number', [ 'seriesNumber', 'issue' ], item)
 
     try_field('type', 'thesisType', item)
@@ -195,7 +197,7 @@ def item_to_bibtex(item):
         try_field('address', 'place', item)
     else:
         try_field('location', 'place', item)
-    
+
     item_doi = get_doi(item)
     if item_doi != '':
         print_key('doi', item_doi)
@@ -208,14 +210,14 @@ def item_to_bibtex(item):
     try_field('volume', 'volume', item)
     try_field('shorttitle', 'shortTitle', item)
     try_field('abstract', 'abstractNote', item)
-    
+
     print('}\n')
 
 
-class MyConfigParser(SafeConfigParser):
+class MyConfigParser(ConfigParser):
     def __init__(self):
-        SafeConfigParser.__init__(self)
-    
+        ConfigParser.__init__(self)
+
     def get_with_default(self, section, option, default_value=None):
         if self.has_option(section, option):
             return self.get(section, option)
